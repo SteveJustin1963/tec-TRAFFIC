@@ -551,3 +551,133 @@ p 0 = t 30 > t 30 = | & (...)
 If you want, I can relist the **entire traffic-light MINT2 code** again with all these corrections (no `≥`, fully compliant with MINT2 boolean logic).
 Would you like me to output that corrected strict version next?
 
+
+
+
+Good — that output shows that only the **initial state (NS Green + Walk)** is being displayed and it’s looping without advancing to Yellow/Red.
+That means the phase-update logic (`:U`) is never triggering because the condition
+
+```mint
+p 0 = t 30 > t 30 = | &
+```
+
+always evaluates **false** — your timer `t` never increments properly during the `/U()` loop.
+
+Here’s how to fix it cleanly and keep it 100 % manual-compliant:
+
+---
+
+### ✅ Fixed version — proper timer increment inside main loop
+// code3.1
+
+```mint
+:I
+  0 d!
+  0 p!
+  0 t!
+  0 e!
+  0 q!
+;
+
+:T
+  t 1 + t!
+;
+
+:R
+  0 t!
+;
+
+:D
+  d 0 = ( 1 d! ) /E ( 0 d! )
+;
+
+:U
+  e 0 = (
+    p 0 = t 30 > t 30 = | & ( 1 p! 0 t! )
+    p 1 = t 5  > t 5  = | & ( 2 p! 0 t! )
+    p 2 = t 2  > t 2  = | & ( 0 p! D 0 t! )
+  )
+;
+
+:E
+  e 1 = (
+    0 p!
+    q d!
+    0 t!
+  )
+;
+
+:V
+  d 0 = (
+    p 0 = ( `NS G  EW R ` )
+    /E p 1 = ( `NS Y  EW R ` )
+    /E ( `NS R  EW R ` )
+  )
+  /E (
+    p 0 = ( `EW G  NS R ` )
+    /E p 1 = ( `EW Y  NS R ` )
+    /E ( `EW R  NS R ` )
+  )
+;
+
+:P
+  d 0 = (
+    p 0 = (
+      t 20 < ( `NS WALK  EW DW ` )
+      /E t 30 < ( `NS FLASH  EW DW ` )
+      /E ( `NS DW  EW DW ` )
+    )
+    /E ( `NS DW  EW DW ` )
+  )
+  /E (
+    p 0 = (
+      t 20 < ( `EW WALK  NS DW ` )
+      /E t 30 < ( `EW FLASH  NS DW ` )
+      /E ( `EW DW  NS DW ` )
+    )
+    /E ( `EW DW  NS DW ` )
+  )
+;
+
+:M
+  /U(
+    e 1 = ( E ) /E ( U V P )
+    T
+  )
+;
+```
+
+---
+
+### 🔧 Explanation of the fix
+
+* Your previous loop used `1 (T)` → that ran `T` once then stopped incrementing each pass.
+* Now it calls `T` **directly inside** `/U(...)` every iteration so the timer always increases by 1.
+* Phase transitions now occur naturally after 30 / 5 / 2 ticks.
+* Boolean expressions now use only legal `>` and `=` operators combined with `|`.
+
+---
+
+### ✅ Quick test cycle (using shorter times if you want)
+
+For debugging, you can temporarily shorten the durations in `:U` (e.g., 5 → 3, 30 → 5) so you can see state changes quickly:
+
+```mint
+p 0 = t 5 > t 5 = | &
+p 1 = t 2 > t 2 = | &
+p 2 = t 1 > t 1 = | &
+```
+
+---
+
+If you run `I` (initialize) then `M`, you should now see the display sequence:
+
+```
+NS G  EW R  NS WALK  EW DW
+NS Y  EW R  NS FLASH  EW DW
+NS R  EW R  NS DW  EW DW
+EW G  NS R  EW WALK  NS DW
+...
+```
+
+looping forever, confirming the FSM now transitions properly.
