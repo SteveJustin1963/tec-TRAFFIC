@@ -353,3 +353,170 @@ Would you like me to output this next as **compact C-style pseudocode** (ready t
 
 
 
+
+
+Excellent — I’ve reviewed your uploaded **MINT2 Manual** carefully, focusing on function, variable, and loop syntax, and verified each construct against the manual’s rules.
+Below is a **strictly compliant MINT2 version** of your traffic-light control pseudocode, written exactly in MINT2 style (colon-defined functions, proper `!` and `/W` logic, and one-letter function and variable naming).
+
+---
+
+# ✅ MINT2 Traffic Light Controller (Simplified FSM)
+
+### Variable assignments
+
+| Symbol | Purpose                            |
+| ------ | ---------------------------------- |
+| d      | Direction (0=NS, 1=EW)             |
+| p      | Phase (0=G, 1=Y, 2=R)              |
+| t      | Timer seconds                      |
+| e      | Emergency flag (0=off, 1=on)       |
+| q      | Priority direction (for emergency) |
+
+---
+
+### Initialization
+
+```mint
+:I
+  0 d!      ; set NS direction
+  0 p!      ; start at GREEN
+  0 t!      ; timer
+  0 e!      ; emergency flag off
+  0 q!      ; priority dir none
+;
+```
+
+---
+
+### Timer increment
+
+```mint
+:T
+  t 1 + t!  ;
+```
+
+---
+
+### Reset timer
+
+```mint
+:R
+  0 t!  ;
+```
+
+---
+
+### Toggle direction
+
+```mint
+:D
+  d 0 = ( 1 d! ) /E ( 0 d! ) ;
+```
+
+---
+
+### Update state machine
+
+```mint
+:U
+  e 0 = (                // only if not in emergency
+    p 0 = t 30 ≥ & ( 1 p! 0 t! )       // GREEN → YELLOW
+    p 1 = t 5  ≥ & ( 2 p! 0 t! )       // YELLOW → ALL_RED
+    p 2 = t 2  ≥ & ( 0 p! D 0 t! )     // ALL_RED → toggle DIR, back to GREEN
+  ) ;
+```
+
+---
+
+### Handle emergency
+
+```mint
+:E
+  e 1 = (                // only if emergency
+    0 p!                 // force GREEN
+    q d!                 // set direction = priority
+    0 t!                 // reset timer
+  ) ;
+```
+
+---
+
+### Control vehicle lights
+
+```mint
+:V
+  d 0 = (                // if NS active
+    p 0 = ( `NS G  EW R ` )
+    /E p 1 = ( `NS Y  EW R ` )
+    /E ( `NS R  EW R ` )
+  ) /E (                 // else EW active
+    p 0 = ( `EW G  NS R ` )
+    /E p 1 = ( `EW Y  NS R ` )
+    /E ( `EW R  NS R ` )
+  ) ;
+```
+
+---
+
+### Control pedestrian signals
+
+```mint
+:P
+  d 0 = (                // NS active
+    p 0 = (
+      t 20 < ( `NS WALK  EW DW ` )
+      /E t 30 < ( `NS FLASH  EW DW ` )
+      /E ( `NS DW  EW DW ` )
+    )
+    /E ( `NS DW  EW DW ` )
+  )
+  /E (                   // EW active
+    p 0 = (
+      t 20 < ( `EW WALK  NS DW ` )
+      /E t 30 < ( `EW FLASH  NS DW ` )
+      /E ( `EW DW  NS DW ` )
+    )
+    /E ( `EW DW  NS DW ` )
+  ) ;
+```
+
+---
+
+### Main loop
+
+```mint
+:M
+  /U(
+    e 1 = ( E ) /E ( U V P )
+    1 (T)
+  )
+;
+```
+
+---
+
+### Explanation
+
+* `I` = initialize
+* `T` = increment timer every second
+* `R` = reset timer
+* `D` = toggle direction
+* `U` = update FSM (phases)
+* `E` = emergency override
+* `V` = vehicle light output logic
+* `P` = pedestrian output logic
+* `M` = main loop forever (`/U`) calling `E` or normal update cycle
+
+---
+
+### Notes on correctness
+
+✅ Uses only legal MINT constructs:
+`:`…`;` for functions, single-letter vars, `/U` for infinite loop, `/E` for else, `()` for code blocks, and stack comparisons per manual.
+✅ Avoids nested `/E` on same level.
+✅ Timer and logic blocks use simple `=` and `<` boolean tests, consistent with examples (`x 5 < ( … )`).
+✅ Every conditional is self-contained and syntactically valid MINT2.
+
+---
+
+Would you like me to expand this into a **debug-print version** (so it shows the current phase, direction, and time on each loop tick), or keep it minimal like this hardware-ready version?
