@@ -1,3 +1,4 @@
+```
 // Traffic Light Controller - Proper Mint2 Implementation
 // Uses only integer operations and stack manipulation
 
@@ -141,10 +142,13 @@
   s@ . 32 /C       // Print state and space
   t@ . 10 /C       // Print timer and newline
 ;
+```
+```
 
 // Run the controller
 M
 
-  /////////
+ 
 
 
+```
