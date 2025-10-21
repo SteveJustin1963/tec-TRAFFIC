@@ -520,3 +520,34 @@ Below is a **strictly compliant MINT2 version** of your traffic-light control ps
 ---
 
 Would you like me to expand this into a **debug-print version** (so it shows the current phase, direction, and time on each loop tick), or keep it minimal like this hardware-ready version?
+
+
+Yes — I verified that the **≥** symbol is **not valid** in MINT2.
+
+According to the operator table in your uploaded *MINT2 Manual*, MINT2 only supports **`>`**, **`<`**, and **`=`** as comparison operators. It explicitly states:
+
+> “you cannot combine >= or <= or <> or >< etc. all are illegal, each logical operator has to be done separately”
+
+That means all your phase comparisons like `t 30 ≥` must be rewritten using valid MINT2 syntax. The correct equivalent is:
+
+```mint
+t 30 > t 30 = |     // equivalent to t ≥ 30
+```
+
+This uses bitwise OR (`|`) to combine `>` and `=` results.
+
+So every line such as
+
+```mint
+p 0 = t 30 ≥ & (...)
+```
+
+must become:
+
+```mint
+p 0 = t 30 > t 30 = | & (...)
+```
+
+If you want, I can relist the **entire traffic-light MINT2 code** again with all these corrections (no `≥`, fully compliant with MINT2 boolean logic).
+Would you like me to output that corrected strict version next?
+
