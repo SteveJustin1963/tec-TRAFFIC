@@ -142,3 +142,214 @@ EW_SOLID_DW  = !(EW_WALK | EW_FLASH_DW)
 
 This is about as small and “Boolean” as it gets while staying faithful to your spec. Want me to map this straight to GPIO pin truth tables or a ROM lookup (DIR,PH,t-window → outputs)?
 
+
+Perfect — here’s your **clean, minimal pseudocode version**, split into clearly separated logic functions (each self-contained and easily portable to C, Python, or Forth-style interpreters like MINT).
+This keeps the timing, phase, and pedestrian logic exactly as in the simplified model.
+
+---
+
+## 🔹 Global Variables
+
+```pseudocode
+DIR      ← NS        // Current direction: NS or EW
+PH       ← GREEN     // Phase: GREEN, YELLOW, ALL_RED
+t        ← 0         // Timer in seconds
+EMERGENCY ← FALSE
+PRI_DIR   ← NONE     // Priority direction for emergency override
+```
+
+---
+
+## 🔹 Main Loop
+
+```pseudocode
+loop forever:
+    if EMERGENCY then
+        handle_emergency()
+    else
+        update_state_machine()
+        update_outputs()
+    end if
+    wait(1 second)
+    t ← t + 1
+end loop
+```
+
+---
+
+## 🔹 Function: update_state_machine()
+
+```pseudocode
+function update_state_machine():
+    if PH = GREEN and t ≥ 30 then
+        PH ← YELLOW
+        t ← 0
+
+    else if PH = YELLOW and t ≥ 5 then
+        PH ← ALL_RED
+        t ← 0
+
+    else if PH = ALL_RED and t ≥ 2 then
+        toggle_direction()
+        PH ← GREEN
+        t ← 0
+    end if
+end function
+```
+
+---
+
+## 🔹 Function: toggle_direction()
+
+```pseudocode
+function toggle_direction():
+    if DIR = NS then
+        DIR ← EW
+    else
+        DIR ← NS
+    end if
+end function
+```
+
+---
+
+## 🔹 Function: handle_emergency()
+
+```pseudocode
+function handle_emergency():
+    // Set all vehicle lights red by default
+    set_all_lights(RED)
+    set_all_ped_signals(SOLID_DONT_WALK)
+
+    // Allow green for the priority direction only
+    if PRI_DIR = NS then
+        set_NS_vehicle(GREEN)
+    else if PRI_DIR = EW then
+        set_EW_vehicle(GREEN)
+    end if
+
+    // Hold until emergency cleared
+    if EMERGENCY = FALSE then
+        reset_timer()
+        PH ← GREEN
+        DIR ← PRI_DIR
+    end if
+end function
+```
+
+---
+
+## 🔹 Function: update_outputs()
+
+```pseudocode
+function update_outputs():
+    if DIR = NS then
+        control_NS_phase()
+        control_EW_red()
+    else
+        control_EW_phase()
+        control_NS_red()
+    end if
+end function
+```
+
+---
+
+## 🔹 Function: control_NS_phase()
+
+```pseudocode
+function control_NS_phase():
+    if PH = GREEN then
+        set_NS_vehicle(GREEN)
+        set_EW_vehicle(RED)
+        control_pedestrian_NS()
+    else if PH = YELLOW then
+        set_NS_vehicle(YELLOW)
+        set_EW_vehicle(RED)
+        set_NS_ped_signal(FLASH_DONT_WALK)
+    else
+        set_NS_vehicle(RED)
+        set_NS_ped_signal(SOLID_DONT_WALK)
+    end if
+end function
+```
+
+---
+
+## 🔹 Function: control_EW_phase()
+
+```pseudocode
+function control_EW_phase():
+    if PH = GREEN then
+        set_EW_vehicle(GREEN)
+        set_NS_vehicle(RED)
+        control_pedestrian_EW()
+    else if PH = YELLOW then
+        set_EW_vehicle(YELLOW)
+        set_NS_vehicle(RED)
+        set_EW_ped_signal(FLASH_DONT_WALK)
+    else
+        set_EW_vehicle(RED)
+        set_EW_ped_signal(SOLID_DONT_WALK)
+    end if
+end function
+```
+
+---
+
+## 🔹 Function: control_pedestrian_NS()
+
+```pseudocode
+function control_pedestrian_NS():
+    if t < 20 then
+        set_NS_ped_signal(WALK)
+    else if t < 30 then
+        set_NS_ped_signal(FLASH_DONT_WALK)
+    else
+        set_NS_ped_signal(SOLID_DONT_WALK)
+    end if
+end function
+```
+
+---
+
+## 🔹 Function: control_pedestrian_EW()
+
+```pseudocode
+function control_pedestrian_EW():
+    if t < 20 then
+        set_EW_ped_signal(WALK)
+    else if t < 30 then
+        set_EW_ped_signal(FLASH_DONT_WALK)
+    else
+        set_EW_ped_signal(SOLID_DONT_WALK)
+    end if
+end function
+```
+
+---
+
+## 🔹 Utility Functions
+
+```pseudocode
+function set_all_lights(color):
+    set_NS_vehicle(color)
+    set_EW_vehicle(color)
+end function
+
+function set_all_ped_signals(state):
+    set_NS_ped_signal(state)
+    set_EW_ped_signal(state)
+end function
+
+function reset_timer():
+    t ← 0
+end function
+```
+
+---
+
+Would you like me to output this next as **compact C-style pseudocode** (ready to compile for a microcontroller), or keep it in this clear structured “flow language” format for direct MINT-Forth or Octave integration?
+
+
+
